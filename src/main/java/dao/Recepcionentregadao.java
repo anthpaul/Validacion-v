@@ -23,9 +23,14 @@ public class Recepcionentregadao {
                 ? rs.getString("checklist") : "");
         r.setEstadoDesdeDB(rs.getString("estado"));
         r.setFechaRecepcionTextoDB(rs.getString("fecha_entrada"));
+        // nombre del cliente desde JOIN
+        try {
+            r.setNombreCliente(rs.getString("nombre_cliente"));
+        } catch (SQLException ignored) {}
         return r;
     }
 
+    // ── INSERT ───────────────────────────────────────────────────────────────
     public int insertar(RecepcionEntrega recepcion, int idUsuario) throws SQLException {
         String sql = "INSERT INTO recepcion " +
                      "(id_vehiculo, id_usuario, km_entrada, observaciones, checklist, estado) " +
@@ -51,37 +56,59 @@ public class Recepcionentregadao {
         }
         return 0;
     }
-    
+
+    // ── SELECT todas con JOIN ─────────────────────────────────────────────────
     public List<RecepcionEntrega> listarTodas() throws SQLException {
         String sql = "SELECT r.*, v.placa, " +
-                     "CONCAT(v.marca, ' ', v.modelo, ' [', v.placa, ']') AS descripcion_vehiculo " +
+                     "CONCAT(v.marca, ' ', v.modelo, ' [', v.placa, ']') AS descripcion_vehiculo, " +
+                     "CONCAT(c.nombres, ' ', c.apellidos) AS nombre_cliente " +
                      "FROM recepcion r " +
                      "JOIN vehiculo v ON r.id_vehiculo = v.id_vehiculo " +
+                     "JOIN cliente c ON v.id_cliente = c.id_cliente " +
                      "ORDER BY r.fecha_entrada DESC";
 
         List<RecepcionEntrega> lista = new ArrayList<>();
-
         try (Connection cn = connectionBD.getConnection();
              PreparedStatement ps = cn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
-
             while (rs.next()) lista.add(mapear(rs));
         }
         return lista;
     }
 
-    public List<RecepcionEntrega> buscarPorPlaca(String placa) throws SQLException {
+    // ── SELECT por id ────────────────────────────────────────────────────────
+    public Optional<RecepcionEntrega> buscarPorId(int idRecepcion) throws SQLException {
         String sql = "SELECT r.*, v.placa, " +
-                     "CONCAT(v.marca, ' ', v.modelo, ' [', v.placa, ']') AS descripcion_vehiculo " +
+                     "CONCAT(v.marca, ' ', v.modelo, ' [', v.placa, ']') AS descripcion_vehiculo, " +
+                     "CONCAT(c.nombres, ' ', c.apellidos) AS nombre_cliente " +
                      "FROM recepcion r " +
                      "JOIN vehiculo v ON r.id_vehiculo = v.id_vehiculo " +
-                     "WHERE v.placa LIKE ? ORDER BY r.fecha_entrada DESC";
-
-        List<RecepcionEntrega> lista = new ArrayList<>();
+                     "JOIN cliente c ON v.id_cliente = c.id_cliente " +
+                     "WHERE r.id_recepcion = ?";
 
         try (Connection cn = connectionBD.getConnection();
              PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setInt(1, idRecepcion);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return Optional.of(mapear(rs));
+            }
+        }
+        return Optional.empty();
+    }
 
+    // ── SELECT por placa ─────────────────────────────────────────────────────
+    public List<RecepcionEntrega> buscarPorPlaca(String placa) throws SQLException {
+        String sql = "SELECT r.*, v.placa, " +
+                     "CONCAT(v.marca, ' ', v.modelo, ' [', v.placa, ']') AS descripcion_vehiculo, " +
+                     "CONCAT(c.nombres, ' ', c.apellidos) AS nombre_cliente " +
+                     "FROM recepcion r " +
+                     "JOIN vehiculo v ON r.id_vehiculo = v.id_vehiculo " +
+                     "JOIN cliente c ON v.id_cliente = c.id_cliente " +
+                     "WHERE v.placa LIKE ? ORDER BY r.fecha_entrada DESC";
+
+        List<RecepcionEntrega> lista = new ArrayList<>();
+        try (Connection cn = connectionBD.getConnection();
+             PreparedStatement ps = cn.prepareStatement(sql)) {
             ps.setString(1, "%" + placa.toUpperCase().trim() + "%");
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) lista.add(mapear(rs));
@@ -90,26 +117,24 @@ public class Recepcionentregadao {
         return lista;
     }
 
+    // ── UPDATE estado ────────────────────────────────────────────────────────
     public boolean actualizarEstado(int idRecepcion, String estado) throws SQLException {
         String sql = "UPDATE recepcion SET estado = ? WHERE id_recepcion = ?";
-
         try (Connection cn = connectionBD.getConnection();
              PreparedStatement ps = cn.prepareStatement(sql)) {
-
             ps.setString(1, estado);
             ps.setInt(2, idRecepcion);
             return ps.executeUpdate() > 0;
         }
     }
 
+    // ── INSERT entrega ───────────────────────────────────────────────────────
     public void registrarEntrega(int idOrden, int idUsuario,
                                   int kmSalida, String observaciones) throws SQLException {
         String sql = "INSERT INTO entrega (id_orden, id_usuario, km_salida, observaciones, condicion) " +
                      "VALUES (?, ?, ?, ?, 'bueno')";
-
         try (Connection cn = connectionBD.getConnection();
              PreparedStatement ps = cn.prepareStatement(sql)) {
-
             ps.setInt(1, idOrden);
             ps.setInt(2, idUsuario);
             ps.setInt(3, kmSalida);
@@ -118,17 +143,25 @@ public class Recepcionentregadao {
         }
     }
 
+    // ── Verificar si tiene recepción activa ──────────────────────────────────
     public boolean tieneRecepcionActiva(int idVehiculo) throws SQLException {
         String sql = "SELECT 1 FROM recepcion WHERE id_vehiculo = ? " +
                      "AND estado NOT IN ('entregado') LIMIT 1";
-
         try (Connection cn = connectionBD.getConnection();
              PreparedStatement ps = cn.prepareStatement(sql)) {
-
             ps.setInt(1, idVehiculo);
-            try (ResultSet rs = ps.executeQuery()) {
-                return rs.next();
-            }
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
+        }
+    }
+
+    // ── Verificar si la orden de una recepción está terminada ─────────────────
+    public boolean ordenTerminada(int idRecepcion) throws SQLException {
+        String sql = "SELECT 1 FROM orden_trabajo " +
+                     "WHERE id_recepcion = ? AND estado = 'terminada'";
+        try (Connection cn = connectionBD.getConnection();
+             PreparedStatement ps = cn.prepareStatement(sql)) {
+            ps.setInt(1, idRecepcion);
+            try (ResultSet rs = ps.executeQuery()) { return rs.next(); }
         }
     }
 }

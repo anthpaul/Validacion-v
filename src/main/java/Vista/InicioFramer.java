@@ -25,7 +25,6 @@ public class InicioFramer extends JFrame {
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // ── Barra superior ───────────────────────────────────────────────────
         JPanel barraTop = new JPanel(new BorderLayout());
         barraTop.setBackground(new Color(0, 102, 204));
         barraTop.setPreferredSize(new Dimension(0, 45));
@@ -44,7 +43,6 @@ public class InicioFramer extends JFrame {
 
         add(barraTop, BorderLayout.NORTH);
 
-        // ── Menú lateral ─────────────────────────────────────────────────────
         JPanel menuLateral = new JPanel();
         menuLateral.setLayout(new BoxLayout(menuLateral, BoxLayout.Y_AXIS));
         menuLateral.setBackground(new Color(45, 45, 45));
@@ -67,8 +65,7 @@ public class InicioFramer extends JFrame {
         menuLateral.add(new JSeparator());
         menuLateral.add(Box.createVerticalStrut(10));
 
-        // ── MÓDULOS SEGÚN ROL ─────────────────────────────────────────────────
-
+            //modulos por rol
         if (usuario.esAdmin()) {
             // Admin ve TODO
             agregarSeccion(menuLateral, "GESTIÓN");

@@ -103,9 +103,15 @@ public class MecanicoPanel extends JPanel {
         tblMecanicos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tblMecanicos.setRowHeight(25);
         tblMecanicos.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        tblMecanicos.getColumnModel().getColumn(0).setMaxWidth(50);
 
         panelTabla.add(new JScrollPane(tblMecanicos), BorderLayout.CENTER);
+        
+        javax.swing.SwingUtilities.invokeLater(() ->{
+            tblMecanicos.getColumnModel().getColumn(0).setMinWidth(0);
+            tblMecanicos.getColumnModel().getColumn(0).setMaxWidth(0);
+            tblMecanicos.getColumnModel().getColumn(0).setWidth(0);
+            tblMecanicos.getColumnModel().getColumn(0).setPreferredWidth(0);
+        });
         add(panelTabla, BorderLayout.CENTER);
     }
 

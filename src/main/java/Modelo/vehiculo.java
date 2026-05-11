@@ -87,9 +87,11 @@ public class vehiculo {
         this.kilometraje = kilometraje;
     }
 
+
     public String getDescripcion() {
         return anio + " " + marca + " " + modelo + " [" + placa + "]";
     }
+    
 
     @Override
     public boolean equals(Object o) {

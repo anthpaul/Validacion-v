@@ -31,7 +31,6 @@ public class LoginControlador {
     private void login() {
         String email    = loginFrame.getTxtEmail().getText().trim();
         String password = new String(loginFrame.getTxtPassword().getPassword());
-        System.out.println("Hash generado: " + util.HashUtil.md5(password));
         // Validación básica
         if (email.isEmpty() || password.isEmpty()) {
             loginFrame.mostrarError("Email y contraseña son obligatorios");
@@ -40,8 +39,7 @@ public class LoginControlador {
  
         try {
             usuario usuario = usuarioService.login(email, password);
- 
-            // Login exitoso — abrir ventana principal
+
             loginFrame.dispose();
             InicioFramer inicioFrame = new InicioFramer(usuario);
             inicioFrame.setVisible(true);

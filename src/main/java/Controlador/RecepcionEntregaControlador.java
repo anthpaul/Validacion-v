@@ -13,15 +13,14 @@ import java.util.List;
 
 public class RecepcionEntregaControlador {
 
-    private final RecepcionEntregaService service        = new RecepcionEntregaService();
+    private final RecepcionEntregaService service         = new RecepcionEntregaService();
     private final MecanicoService         mecanicoService = new MecanicoService();
     private final RecepcionEntregaPanel   panel;
     private final usuario                 usuarioSesion;
 
-    // Constructor con usuario de sesión
     public RecepcionEntregaControlador(RecepcionEntregaPanel panel,
                                        usuario usuarioSesion) {
-        this.panel        = panel;
+        this.panel         = panel;
         this.usuarioSesion = usuarioSesion;
         iniciarEventos();
         cargarVehiculos();
@@ -29,7 +28,6 @@ public class RecepcionEntregaControlador {
         cargarTabla();
     }
 
-    // Constructor sin usuario (compatibilidad)
     public RecepcionEntregaControlador(RecepcionEntregaPanel panel) {
         this(panel, null);
     }
@@ -40,8 +38,14 @@ public class RecepcionEntregaControlador {
         panel.getBtnEntregar().addActionListener(e -> entregarVehiculo());
         panel.getBtnBuscar().addActionListener(e -> buscar());
 
+        // Al seleccionar fila → cargar datos completos y verificar si puede entregar
         panel.getTabla().getSelectionModel().addListSelectionListener(e -> {
-            if (!e.getValueIsAdjusting()) panel.cargarRegistroSeleccionado();
+            if (!e.getValueIsAdjusting()) {
+                int idRecepcion = panel.getIdRecepcionSeleccionado();
+                if (idRecepcion > 0) {
+                    cargarRegistroSeleccionado(idRecepcion);
+                }
+            }
         });
     }
 
@@ -68,6 +72,22 @@ public class RecepcionEntregaControlador {
             panel.cargarTabla(service.listarTodos());
         } catch (SQLException e) {
             panel.mostrarError("Error al cargar recepciones: " + e.getMessage());
+        }
+    }
+
+    // ── Al seleccionar una fila carga todo y habilita/deshabilita entrega ────
+    private void cargarRegistroSeleccionado(int idRecepcion) {
+        try {
+            RecepcionEntrega r = service.buscarPorId(idRecepcion);
+            panel.cargarRegistroCompleto(r);
+
+            // Verificar si puede entregar
+            boolean puedeEntregar = service.puedeEntregar(idRecepcion)
+                                    && !"entregado".equals(r.getEstado());
+            panel.habilitarEntrega(puedeEntregar);
+
+        } catch (SQLException e) {
+            panel.mostrarError("Error al cargar el registro: " + e.getMessage());
         }
     }
 

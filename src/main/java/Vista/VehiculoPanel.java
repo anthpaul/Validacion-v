@@ -8,9 +8,10 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
+
 /**
  *
- * @author User
+ * @author Anthony Delgado 
  */
 public class VehiculoPanel extends JPanel {
 
@@ -106,7 +107,7 @@ public class VehiculoPanel extends JPanel {
         panelBusqueda.add(btnBuscar);
         panelTabla.add(panelBusqueda, BorderLayout.NORTH);
  
-        String[] columnas = {"ID", "idCliente", "Placa", "Marca", "Modelo", "Año", "Color", "Km"};
+        String[] columnas = {"ID", "Cliente", "Placa", "Marca", "Modelo", "Año", "Color", "Km"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -114,15 +115,19 @@ public class VehiculoPanel extends JPanel {
         tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tabla.setRowHeight(25);
         tabla.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-
-    
-        tabla.getColumnModel().getColumn(0).setMaxWidth(50);
-
-        tabla.getColumnModel().getColumn(1).setMaxWidth(0);
-        tabla.getColumnModel().getColumn(1).setMinWidth(0);
-        tabla.getColumnModel().getColumn(1).setWidth(0);
  
         panelTabla.add(new JScrollPane(tabla), BorderLayout.CENTER);
+        javax.swing.SwingUtilities.invokeLater(() ->{
+            tabla.getColumnModel().getColumn(0).setMinWidth(0);
+            tabla.getColumnModel().getColumn(0).setMaxWidth(0);
+            tabla.getColumnModel().getColumn(0).setWidth(0);
+            tabla.getColumnModel().getColumn(0).setPreferredWidth(0);
+            tabla.getColumnModel().getColumn(1).setMinWidth(0);
+            tabla.getColumnModel().getColumn(1).setMaxWidth(0);
+            tabla.getColumnModel().getColumn(1).setWidth(0);
+            tabla.getColumnModel().getColumn(1).setPreferredWidth(0);
+        });
+        
         add(panelTabla, BorderLayout.CENTER);
     }
 
@@ -138,9 +143,14 @@ public class VehiculoPanel extends JPanel {
         modeloTabla.setRowCount(0);
         for (vehiculo v : vehiculos) {
             modeloTabla.addRow(new Object[]{
-                v.getIdVehiculo(),v.getIdCliente(), v.getPlaca(), v.getMarca(),
-                v.getModelo(), v.getAnio(),
-                v.getColor() != null ? v.getColor() : "",
+                v.getIdVehiculo(),
+                v.getIdCliente(), 
+                v.getPlaca(),
+                v.getMarca(),
+                v.getModelo(),
+                v.getAnio(),
+                v.getColor() != null ? 
+                        v.getColor() : "",
                 v.getKilometraje()
             });
         }

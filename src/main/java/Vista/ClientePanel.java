@@ -39,13 +39,14 @@ public class ClientePanel extends JPanel {
         setLayout(new BorderLayout(10, 10));
         setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
         setBackground(new Color(240, 240, 240));
- 
-        // ── Título ───────────────────────────────────────────────────────────
+        txtId = new JTextField();
+        txtId.setVisible(false);
+
         JLabel lblTitulo = new JLabel("Gestión de Clientes");
         lblTitulo.setFont(new Font("Arial", Font.BOLD, 16));
         add(lblTitulo, BorderLayout.NORTH);
  
-        // ── Panel izquierdo — Formulario ─────────────────────────────────────
+
         JPanel panelForm = new JPanel(new GridBagLayout());
         panelForm.setBackground(Color.WHITE);
         panelForm.setBorder(BorderFactory.createTitledBorder("Datos del Cliente"));
@@ -56,10 +57,7 @@ public class ClientePanel extends JPanel {
         gbc.insets  = new Insets(4, 8, 4, 8);
         gbc.weightx = 1.0;
  
-        // Campo oculto para el id
-        txtId = new JTextField();
-        txtId.setVisible(false);
- 
+        
         int fila = 0;
         txtNombres   = agregarCampo(panelForm, gbc, "Nombres *",    fila++);
         txtApellidos = agregarCampo(panelForm, gbc, "Apellidos *",  fila++);
@@ -71,21 +69,16 @@ public class ClientePanel extends JPanel {
         // Botones
         JPanel panelBotones = new JPanel(new GridLayout(1, 3, 5, 0));
         panelBotones.setBackground(Color.WHITE);
- 
         btnNuevo    = crearBoton("Nuevo",    new Color(108, 117, 125));
         btnGuardar  = crearBoton("Guardar",  new Color(40, 167, 69));
         btnEliminar = crearBoton("Eliminar", new Color(220, 53, 69));
- 
         panelBotones.add(btnNuevo);
         panelBotones.add(btnGuardar);
         panelBotones.add(btnEliminar);
- 
-        gbc.gridy   = fila;
-        gbc.gridx   = 0;
-        gbc.gridwidth = 2;
-        gbc.insets  = new Insets(12, 8, 8, 8);
+
+        gbc.gridy = fila * 2; gbc.gridx = 0; gbc.gridwidth = 2;
+        gbc.insets = new Insets(12, 8, 8, 8);
         panelForm.add(panelBotones, gbc);
- 
         add(panelForm, BorderLayout.WEST);
  
         // ── Panel derecho — Tabla ─────────────────────────────────────────────
@@ -102,9 +95,10 @@ public class ClientePanel extends JPanel {
         panelBusqueda.add(txtBusqueda);
         panelBusqueda.add(btnBuscar);
         panelTabla.add(panelBusqueda, BorderLayout.NORTH);
+
  
         // Tabla
-        String[] columnas = {"ID", "Nombres", "Apellidos", "Cédula", "Teléfono", "Email"};
+        String[] columnas = {"ID","Nombres", "Apellidos", "Cédula", "Teléfono", "Email", "Dirección"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -112,10 +106,19 @@ public class ClientePanel extends JPanel {
         tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tabla.setRowHeight(25);
         tabla.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        tabla.getColumnModel().getColumn(0).setMaxWidth(50); // ID pequeño
- 
+        
+
         panelTabla.add(new JScrollPane(tabla), BorderLayout.CENTER);
         add(panelTabla, BorderLayout.CENTER);
+        
+        javax.swing.SwingUtilities.invokeLater(() -> {
+        tabla.getColumnModel().getColumn(0).setMinWidth(0);
+        tabla.getColumnModel().getColumn(0).setMaxWidth(0);
+        tabla.getColumnModel().getColumn(0).setWidth(0);
+        tabla.getColumnModel().getColumn(0).setPreferredWidth(0);
+    });
+
+    add(panelTabla, BorderLayout.CENTER);
     }
  
     public void cargarTabla(List<cliente> clientes) {
@@ -127,7 +130,8 @@ public class ClientePanel extends JPanel {
                 c.getApellidos(),
                 c.getCedula(),
                 c.getTelefono(),
-                c.getEmail() != null ? c.getEmail() : ""
+                c.getEmail() != null ? c.getEmail() : "",
+                c.getDireccion()
             });
         }
     }
@@ -146,7 +150,7 @@ public class ClientePanel extends JPanel {
     }
  
     public void cargarEnFormulario(cliente c) {
-        txtId.setText(String.valueOf(c.getIdCliente()));
+        txtId.setText(String.valueOf(c.getIdCliente())); 
         txtNombres.setText(c.getNombres());
         txtApellidos.setText(c.getApellidos());
         txtCedula.setText(c.getCedula());
@@ -156,7 +160,6 @@ public class ClientePanel extends JPanel {
     }
  
     public void limpiarFormulario() {
-        txtId.setText("");
         txtNombres.setText("");
         txtApellidos.setText("");
         txtCedula.setText("");
@@ -177,12 +180,13 @@ public class ClientePanel extends JPanel {
         int fila = tabla.getSelectedRow();
         if (fila == -1) return null;
         cliente c = new cliente();
-        c.setIdCliente((int) modeloTabla.getValueAt(fila, 0));
-        c.setNombres((String) modeloTabla.getValueAt(fila, 1));
+        c.setIdCliente((int)    modeloTabla.getValueAt(fila, 0));
+        c.setNombres((String)   modeloTabla.getValueAt(fila, 1));
         c.setApellidos((String) modeloTabla.getValueAt(fila, 2));
-        c.setCedula((String) modeloTabla.getValueAt(fila, 3));
-        c.setTelefono((String) modeloTabla.getValueAt(fila, 4));
-        c.setEmail((String) modeloTabla.getValueAt(fila, 5));
+        c.setCedula((String)    modeloTabla.getValueAt(fila, 3));
+        c.setTelefono((String)  modeloTabla.getValueAt(fila, 4));
+        c.setEmail((String)     modeloTabla.getValueAt(fila, 5));
+        c.setDireccion((String) modeloTabla.getValueAt(fila, 6));
         return c;
     }
  
@@ -201,14 +205,13 @@ public class ClientePanel extends JPanel {
                 JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION;
     }
  
-    // ── Getters de componentes ───────────────────────────────────────────────
+
     public JButton getBtnNuevo()    { return btnNuevo; }
     public JButton getBtnGuardar()  { return btnGuardar; }
     public JButton getBtnEliminar() { return btnEliminar; }
     public JButton getBtnBuscar()   { return btnBuscar; }
     public JTable  getTabla()       { return tabla; }
- 
-    // ── Métodos privados de apoyo ─────────────────────────────────────────────
+
     private JTextField agregarCampo(JPanel panel, GridBagConstraints gbc,
                                     String etiqueta, int fila) {
         gbc.gridy    = fila * 2;

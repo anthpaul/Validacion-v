@@ -15,29 +15,24 @@ import java.util.List;
  */
 public class MantenimientoPanel extends JPanel {
 
-    // ── Formulario orden ─────────────────────────────────────────────────────
     private JPanel            panelComboMecanico;
     private JComboBox<String> cmbMecanico;
     private List<Mecanico>    listaMecanicos;
     private JTextField        txtDescripcion;
 
-    // ── Formulario detalle ───────────────────────────────────────────────────
     private JComboBox<String> cmbTipo;
     private JTextField        txtDetDescripcion;
     private JTextField        txtCosto;
     private JTextField        txtCantidad;
 
-    // ── Botones ──────────────────────────────────────────────────────────────
     private JButton btnNuevo;
     private JButton btnAgregarDetalle;
     private JButton btnFinalizar;
     private JButton btnVerDetalles;
 
-    // ── Tabla órdenes ────────────────────────────────────────────────────────
     private JTable            tablaOrdenes;
     private DefaultTableModel modeloOrdenes;
 
-    // ── Tabla detalles ───────────────────────────────────────────────────────
     private JTable            tablaDetalles;
     private DefaultTableModel modeloDetalles;
 
@@ -74,57 +69,48 @@ public class MantenimientoPanel extends JPanel {
         panelComboMecanico.setBackground(Color.WHITE);
         GridBagConstraints gbcM = new GridBagConstraints();
         gbcM.fill = GridBagConstraints.HORIZONTAL;
-        gbcM.insets = new Insets(0, 0, 0, 0);
         gbcM.weightx = 1.0; gbcM.gridwidth = 2;
         gbcM.gridy = 0;
         panelComboMecanico.add(new JLabel("Mecánico *"), gbcM);
         cmbMecanico = new JComboBox<>();
         gbcM.gridy = 1;
         panelComboMecanico.add(cmbMecanico, gbcM);
-
         gbc.gridy = fila++;
         panelForm.add(panelComboMecanico, gbc);
 
-        // Descripción orden
         gbc.gridy = fila++;
         panelForm.add(new JLabel("Descripción orden"), gbc);
         txtDescripcion = new JTextField();
         gbc.gridy = fila++;
         panelForm.add(txtDescripcion, gbc);
 
-        // Separador
         gbc.gridy = fila++;
         panelForm.add(new JSeparator(), gbc);
 
-        // Tipo
         gbc.gridy = fila++;
         panelForm.add(new JLabel("Tipo *"), gbc);
         cmbTipo = new JComboBox<>(new String[]{"servicio", "repuesto"});
         gbc.gridy = fila++;
         panelForm.add(cmbTipo, gbc);
 
-        // Descripción detalle
         gbc.gridy = fila++;
         panelForm.add(new JLabel("Descripción detalle *"), gbc);
         txtDetDescripcion = new JTextField();
         gbc.gridy = fila++;
         panelForm.add(txtDetDescripcion, gbc);
 
-        // Costo
         gbc.gridy = fila++;
         panelForm.add(new JLabel("Costo unitario *"), gbc);
         txtCosto = new JTextField();
         gbc.gridy = fila++;
         panelForm.add(txtCosto, gbc);
 
-        // Cantidad
         gbc.gridy = fila++;
         panelForm.add(new JLabel("Cantidad *"), gbc);
         txtCantidad = new JTextField();
         gbc.gridy = fila++;
         panelForm.add(txtCantidad, gbc);
 
-        // Botones
         JPanel panelBotones = new JPanel(new GridLayout(2, 2, 5, 5));
         panelBotones.setBackground(Color.WHITE);
         btnNuevo          = crearBoton("Nuevo",           new Color(108, 117, 125));
@@ -139,18 +125,18 @@ public class MantenimientoPanel extends JPanel {
         gbc.gridy = fila++;
         gbc.insets = new Insets(12, 8, 8, 8);
         panelForm.add(panelBotones, gbc);
-
         add(panelForm, BorderLayout.WEST);
 
-        // ── Panel derecho — tablas ────────────────────────────────────────────
+        // ── Panel derecho ─────────────────────────────────────────────────────
         JPanel panelDerecho = new JPanel(new GridLayout(2, 1, 0, 10));
         panelDerecho.setBackground(new Color(240, 240, 240));
 
-        // Tabla órdenes
+        // Tabla órdenes — ID oculto, muestra cliente, placa, mecánico, estado
         JPanel panelOrdenes = new JPanel(new BorderLayout());
         panelOrdenes.setBorder(BorderFactory.createTitledBorder("Órdenes de Trabajo"));
 
-        String[] colOrdenes = {"ID", "Recepción", "Mecánico", "Estado", "Fecha Inicio", "Fecha Fin"};
+        String[] colOrdenes = {"ID", "Cliente", "Placa", "Mecánico",
+                               "Estado", "Fecha Inicio", "Fecha Fin"};
         modeloOrdenes = new DefaultTableModel(colOrdenes, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -158,12 +144,43 @@ public class MantenimientoPanel extends JPanel {
         tablaOrdenes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tablaOrdenes.setRowHeight(25);
         tablaOrdenes.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        tablaOrdenes.getColumnModel().getColumn(0).setMaxWidth(50);
+
+        // Color por estado
+        tablaOrdenes.setDefaultRenderer(Object.class, (t, value, isSelected,
+                hasFocus, row, col) -> {
+            JLabel cell = new JLabel(value != null ? value.toString() : "");
+            cell.setOpaque(true);
+            String estado = (String) modeloOrdenes.getValueAt(row, 4);
+            if (isSelected) {
+                cell.setBackground(t.getSelectionBackground());
+                cell.setForeground(Color.WHITE);
+            } else {
+                switch (estado != null ? estado : "") {
+                    case "abierta":    cell.setBackground(new Color(255, 243, 205)); break;
+                    case "en_proceso": cell.setBackground(new Color(209, 236, 241)); break;
+                    case "terminada":  cell.setBackground(new Color(212, 237, 218)); break;
+                    case "cancelada":  cell.setBackground(new Color(248, 215, 218)); break;
+                    default:           cell.setBackground(Color.WHITE);
+                }
+                cell.setForeground(Color.BLACK);
+            }
+            cell.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 5));
+            return cell;
+        });
+
         panelOrdenes.add(new JScrollPane(tablaOrdenes), BorderLayout.CENTER);
+
+        SwingUtilities.invokeLater(() -> {
+            tablaOrdenes.getColumnModel().getColumn(0).setMinWidth(0);
+            tablaOrdenes.getColumnModel().getColumn(0).setMaxWidth(0);
+            tablaOrdenes.getColumnModel().getColumn(0).setWidth(0);
+            tablaOrdenes.getColumnModel().getColumn(0).setPreferredWidth(0);
+        });
 
         // Tabla detalles
         JPanel panelDetalles = new JPanel(new BorderLayout());
-        panelDetalles.setBorder(BorderFactory.createTitledBorder("Detalles de la Orden Seleccionada"));
+        panelDetalles.setBorder(
+                BorderFactory.createTitledBorder("Detalles de la Orden Seleccionada"));
 
         String[] colDetalles = {"ID", "Tipo", "Descripción", "Cantidad", "Costo", "Subtotal"};
         modeloDetalles = new DefaultTableModel(colDetalles, 0) {
@@ -174,24 +191,28 @@ public class MantenimientoPanel extends JPanel {
         tablaDetalles.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
         panelDetalles.add(new JScrollPane(tablaDetalles), BorderLayout.CENTER);
 
+        SwingUtilities.invokeLater(() -> {
+            tablaDetalles.getColumnModel().getColumn(0).setMinWidth(0);
+            tablaDetalles.getColumnModel().getColumn(0).setMaxWidth(0);
+            tablaDetalles.getColumnModel().getColumn(0).setWidth(0);
+            tablaDetalles.getColumnModel().getColumn(0).setPreferredWidth(0);
+        });
+
         panelDerecho.add(panelOrdenes);
         panelDerecho.add(panelDetalles);
         add(panelDerecho, BorderLayout.CENTER);
     }
 
-    // ── Ocultar combo mecánico para el rol mecánico ──────────────────────────
     public void ocultarComboMecanico() {
         panelComboMecanico.setVisible(false);
     }
 
-    // ── Métodos que usa el Controlador ───────────────────────────────────────
     public void cargarMecanicos(List<Mecanico> mecanicos) {
         this.listaMecanicos = mecanicos;
         cmbMecanico.removeAllItems();
-        for (Mecanico m : mecanicos) {
+        for (Mecanico m : mecanicos)
             cmbMecanico.addItem(m.getNombre() + " " + m.getApellido() +
                                 " — " + m.getCedula());
-        }
     }
 
     public void cargarTabla(List<OrdenTrabajo> lista) {
@@ -199,11 +220,13 @@ public class MantenimientoPanel extends JPanel {
         for (OrdenTrabajo ot : lista) {
             modeloOrdenes.addRow(new Object[]{
                 ot.getIdOrden(),
-                ot.getIdRecepcion(),
-                ot.getIdMecanico(),
+                ot.getNombreCliente(),
+                ot.getPlaca(),
+                ot.getNombreMecanico(),
                 ot.getEstadoTexto(),
                 ot.getFechaInicio() != null ? ot.getFechaInicio() : "",
-                ot.getFechaFin()    != null ? ot.getFechaFin()    : "—"
+                ot.getFechaFin()    != null && !ot.getFechaFin().isEmpty()
+                        ? ot.getFechaFin() : "—"
             });
         }
     }
@@ -213,7 +236,9 @@ public class MantenimientoPanel extends JPanel {
         for (DetalleOrden d : detalles) {
             modeloDetalles.addRow(new Object[]{
                 d.getIdDetalle(), d.getTipo(), d.getDescripcion(),
-                d.getCantidad(), d.getCostoUnitario(), d.getSubtotal()
+                d.getCantidad(),
+                String.format("$%.2f", d.getCostoUnitario()),
+                String.format("$%.2f", d.getSubtotal())
             });
         }
     }

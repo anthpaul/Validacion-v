@@ -15,9 +15,12 @@ import java.util.List;
  */
 public class FacturacionControlador {
 
-    private final FacturaService    facturaService = new FacturaService();
-    private final FacturacionPanel  panel;
-    private final usuario           usuarioSesion;
+    private final FacturaService   facturaService = new FacturaService();
+    private final FacturacionPanel panel;
+    private final usuario          usuarioSesion;
+
+    // Orden actualmente cargada en pantalla
+    private OrdenTrabajo ordenActual;
 
     public FacturacionControlador(FacturacionPanel panel, usuario usuarioSesion) {
         this.panel         = panel;
@@ -28,20 +31,21 @@ public class FacturacionControlador {
     }
 
     private void iniciarEventos() {
-
-        // Cargar detalles al seleccionar orden
         panel.getBtnCargar().addActionListener(e -> cargarDetalles());
-
-        // Generar factura
         panel.getBtnGenerar().addActionListener(e -> generarFactura());
-
-        // Cobrar
         panel.getBtnPagar().addActionListener(e -> cobrar());
-
-        // Anular
         panel.getBtnAnular().addActionListener(e -> anular());
+
+        // Al hacer clic en el historial → cargar la factura para anular
+        panel.getTablaFacturas().getSelectionModel()
+                .addListSelectionListener(e -> {
+                    if (!e.getValueIsAdjusting()) {
+                        seleccionarFacturaHistorial();
+                    }
+                });
     }
 
+    // ── Cargar órdenes terminadas sin factura ────────────────────────────────
     private void cargarOrdenes() {
         try {
             List<OrdenTrabajo> ordenes = facturaService.listarOrdenesParaFacturar();
@@ -51,6 +55,7 @@ public class FacturacionControlador {
         }
     }
 
+    // ── Cargar detalles de la orden seleccionada ─────────────────────────────
     private void cargarDetalles() {
         int idOrden = panel.getIdOrdenSeleccionada();
         if (idOrden == 0) {
@@ -59,18 +64,26 @@ public class FacturacionControlador {
         }
 
         try {
+            // Guardar la orden actual para usar su nombre de cliente
+            List<OrdenTrabajo> ordenes = facturaService.listarOrdenesParaFacturar();
+            ordenActual = ordenes.stream()
+                    .filter(o -> o.getIdOrden() == idOrden)
+                    .findFirst().orElse(null);
+
             List<DetalleOrden> detalles = facturaService.listarDetalles(idOrden);
             panel.cargarDetalles(detalles);
 
             double subtotal = facturaService.calcularSubtotal(detalles);
-            panel.mostrarTotalesPrevios(subtotal);
+            String nombreCliente = ordenActual != null
+                    ? ordenActual.getNombreCliente() : "—";
+            panel.mostrarTotalesPrevios(subtotal, nombreCliente);
 
         } catch (SQLException e) {
             panel.mostrarError("Error al cargar detalles: " + e.getMessage());
         }
     }
 
-
+    // ── Generar factura — idCliente real desde la orden ──────────────────────
     private void generarFactura() {
         int idOrden = panel.getIdOrdenSeleccionada();
         if (idOrden == 0) {
@@ -79,12 +92,12 @@ public class FacturacionControlador {
         }
 
         try {
-            // idCliente = 1 temporalmente
-            // TODO: obtener idCliente desde la recepción de la orden
             Factura factura = facturaService.generarFactura(
-                    idOrden, 1, usuarioSesion.getIdUsuario());
+                    idOrden, usuarioSesion.getIdUsuario());
 
-            panel.mostrarTotales(factura);
+            String nombreCliente = ordenActual != null
+                    ? ordenActual.getNombreCliente() : "—";
+            panel.mostrarTotales(factura, nombreCliente);
             panel.mostrarExito("Factura generada: " + factura.getNumFactura());
             cargarOrdenes();
             cargarHistorial();
@@ -96,10 +109,16 @@ public class FacturacionControlador {
         }
     }
 
+    // ── Cobrar ───────────────────────────────────────────────────────────────
     private void cobrar() {
         Factura factura = panel.getFacturaActual();
         if (factura == null) {
-            panel.mostrarError("Primero genere la factura");
+            panel.mostrarError("Primero genere o seleccione una factura");
+            return;
+        }
+
+        if ("anulada".equals(factura.getEstado())) {
+            panel.mostrarError("No se puede cobrar una factura anulada");
             return;
         }
 
@@ -111,40 +130,79 @@ public class FacturacionControlador {
 
         if (monto < factura.getTotal()) {
             panel.mostrarError(String.format(
-                "Monto insuficiente. Total: $%.2f — Recibido: $%.2f",
+                "Monto insuficiente.\nTotal: $%.2f\nRecibido: $%.2f",
                 factura.getTotal(), monto));
             return;
         }
 
         double cambio = monto - factura.getTotal();
         panel.mostrarExito(String.format(
-            "Pago registrado.\nCambio: $%.2f", cambio));
+            "✓ Pago registrado correctamente\n" +
+            "Factura: %s\n" +
+            "Total cobrado: $%.2f\n" +
+            "Cambio: $%.2f",
+            factura.getNumFactura(), factura.getTotal(), cambio));
+
         panel.limpiar();
         cargarHistorial();
     }
 
+    // ── Anular — desde factura generada o desde el historial ─────────────────
     private void anular() {
         Factura factura = panel.getFacturaActual();
         if (factura == null) {
-            panel.mostrarError("No hay factura seleccionada para anular");
+            panel.mostrarError(
+                "Seleccione una factura del historial para anular");
+            return;
+        }
+
+        if ("anulada".equals(factura.getEstado())) {
+            panel.mostrarError("Esta factura ya está anulada");
             return;
         }
 
         if (!panel.confirmar("¿Está seguro de anular la factura " +
-                              factura.getNumFactura() + "?")) return;
+                              factura.getNumFactura() + "?\n" +
+                              "Esta acción no se puede deshacer.")) return;
 
         try {
             facturaService.anular(factura.getIdFactura());
-            panel.mostrarExito("Factura anulada correctamente");
+            panel.mostrarExito("Factura " + factura.getNumFactura() +
+                               " anulada correctamente");
             panel.limpiar();
+            cargarOrdenes();  // la orden vuelve a estar disponible
             cargarHistorial();
 
+        } catch (IllegalArgumentException e) {
+            panel.mostrarError(e.getMessage());
         } catch (SQLException e) {
             panel.mostrarError("Error al anular: " + e.getMessage());
         }
     }
 
-    // ── Historial de facturas ────────────────────────────────────────────────
+    // ── Seleccionar factura del historial ────────────────────────────────────
+    private void seleccionarFacturaHistorial() {
+        int idFactura = panel.getIdFacturaSeleccionadaHistorial();
+        if (idFactura == 0) return;
+
+        try {
+            Factura factura = facturaService.buscarPorId(idFactura);
+            panel.setFacturaActual(factura);
+
+            // Mostrar sus totales en el resumen
+            panel.mostrarTotales(factura, "Ver historial");
+
+            // Cargar sus detalles
+            List<DetalleOrden> detalles =
+                    facturaService.listarDetalles(factura.getIdOrden());
+            panel.cargarDetalles(detalles);
+
+        } catch (SQLException e) {
+            panel.mostrarError("Error al cargar factura: " + e.getMessage());
+        }
+    }
+
+    // ── Historial ────────────────────────────────────────────────────────────
     private void cargarHistorial() {
         try {
             List<Factura> facturas = facturaService.listarTodas();

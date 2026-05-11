@@ -9,18 +9,24 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
+/**
+ * 
+ * @author Anthony Delgado 
+ * 
+ */
 public class UsuarioPanel extends JPanel {
 
-    private JTextField     txtId;
-    private JTextField     txtNombre;
-    private JTextField     txtEmail;
-    private JTextField     txtPassword;
+    private JTextField    txtId;
+    private JTextField    txtNombre;
+    private JTextField    txtEmail;
+    private JTextField    txtPassword;
     private JComboBox<String> cmbRol;
-    private JTextField     txtBusqueda;
+    private JTextField    txtBusqueda;
 
     private JButton btnNuevo;
     private JButton btnGuardar;
     private JButton btnDesactivar;
+    private JButton btnActivar;      // ← nuevo
     private JButton btnBuscar;
 
     private JTable            tabla;
@@ -40,6 +46,7 @@ public class UsuarioPanel extends JPanel {
         lblTitulo.setFont(new Font("Arial", Font.BOLD, 16));
         add(lblTitulo, BorderLayout.NORTH);
 
+        // ── Formulario ───────────────────────────────────────────────────────
         JPanel panelForm = new JPanel(new GridBagLayout());
         panelForm.setBackground(Color.WHITE);
         panelForm.setBorder(BorderFactory.createTitledBorder("Datos del Usuario"));
@@ -59,7 +66,6 @@ public class UsuarioPanel extends JPanel {
         txtEmail    = agregarCampo(panelForm, gbc, "Email *",           fila++);
         txtPassword = agregarCampo(panelForm, gbc, "Contraseña *",      fila++);
 
-        // Rol combo
         gbc.gridy = fila * 2; gbc.gridx = 0;
         panelForm.add(new JLabel("Rol *"), gbc);
         cmbRol = new JComboBox<>(new String[]{
@@ -71,14 +77,16 @@ public class UsuarioPanel extends JPanel {
         panelForm.add(cmbRol, gbc);
         fila++;
 
-        // Botones
-        JPanel panelBotones = new JPanel(new GridLayout(1, 3, 5, 0));
+        // Botones en dos filas
+        JPanel panelBotones = new JPanel(new GridLayout(2, 2, 5, 5));
         panelBotones.setBackground(Color.WHITE);
-        btnNuevo      = crearBoton("Nuevo",      new Color(108, 117, 125));
-        btnGuardar    = crearBoton("Guardar",    new Color(40, 167, 69));
-        btnDesactivar = crearBoton("Desactivar", new Color(220, 53, 69));
+        btnNuevo      = crearBoton("Nuevo",       new Color(108, 117, 125));
+        btnGuardar    = crearBoton("Guardar",      new Color(40, 167, 69));
+        btnActivar    = crearBoton("Activar",      new Color(23, 162, 184));
+        btnDesactivar = crearBoton("Desactivar",   new Color(220, 53, 69));
         panelBotones.add(btnNuevo);
         panelBotones.add(btnGuardar);
+        panelBotones.add(btnActivar);
         panelBotones.add(btnDesactivar);
 
         gbc.gridy = fila * 2; gbc.insets = new Insets(12, 8, 8, 8);
@@ -86,6 +94,7 @@ public class UsuarioPanel extends JPanel {
 
         add(panelForm, BorderLayout.WEST);
 
+        // ── Tabla ────────────────────────────────────────────────────────────
         JPanel panelTabla = new JPanel(new BorderLayout(0, 8));
         panelTabla.setBackground(new Color(240, 240, 240));
 
@@ -99,7 +108,7 @@ public class UsuarioPanel extends JPanel {
         panelBusqueda.add(btnBuscar);
         panelTabla.add(panelBusqueda, BorderLayout.NORTH);
 
-        String[] columnas = {"ID", "Nombre", "Email", "Rol", "Activo"};
+        String[] columnas = {"ID", "Nombre", "Email", "Rol", "Estado"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
@@ -107,9 +116,8 @@ public class UsuarioPanel extends JPanel {
         tabla.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tabla.setRowHeight(25);
         tabla.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        tabla.getColumnModel().getColumn(0).setMaxWidth(50);
 
-        // Color por estado activo
+        // Color por estado activo/inactivo
         tabla.setDefaultRenderer(Object.class, (t, value, isSelected,
                 hasFocus, row, col) -> {
             JLabel cell = new JLabel(value != null ? value.toString() : "");
@@ -130,9 +138,18 @@ public class UsuarioPanel extends JPanel {
         });
 
         panelTabla.add(new JScrollPane(tabla), BorderLayout.CENTER);
+
+        SwingUtilities.invokeLater(() -> {
+            tabla.getColumnModel().getColumn(0).setMinWidth(0);
+            tabla.getColumnModel().getColumn(0).setMaxWidth(0);
+            tabla.getColumnModel().getColumn(0).setWidth(0);
+            tabla.getColumnModel().getColumn(0).setPreferredWidth(0);
+        });
+
         add(panelTabla, BorderLayout.CENTER);
     }
 
+    // ── Métodos que usa el Controlador ───────────────────────────────────────
     public void cargarTabla(List<usuario> usuarios) {
         modeloTabla.setRowCount(0);
         for (usuario u : usuarios) {
@@ -182,6 +199,12 @@ public class UsuarioPanel extends JPanel {
         return (int) modeloTabla.getValueAt(fila, 0);
     }
 
+    public boolean isUsuarioActivoSeleccionado() {
+        int fila = tabla.getSelectedRow();
+        if (fila == -1) return false;
+        return (boolean) modeloTabla.getValueAt(fila, 4);
+    }
+
     public usuario getUsuarioSeleccionado() {
         int fila = tabla.getSelectedRow();
         if (fila == -1) return null;
@@ -209,6 +232,7 @@ public class UsuarioPanel extends JPanel {
 
     public JButton getBtnNuevo()      { return btnNuevo; }
     public JButton getBtnGuardar()    { return btnGuardar; }
+    public JButton getBtnActivar()    { return btnActivar; }
     public JButton getBtnDesactivar() { return btnDesactivar; }
     public JButton getBtnBuscar()     { return btnBuscar; }
     public JTable  getTabla()         { return tabla; }

@@ -17,11 +17,12 @@ public class cliente {
  
     public cliente() {}
 
-    public cliente(String nombres, String apellidos, String cedula, String telefono) {
+    public cliente(String nombres, String apellidos, String cedula, String telefono, String direccion) {
         setNombres(nombres);
         setApellidos(apellidos);
         setCedula(cedula);
         setTelefono(telefono);
+        setDireccion(direccion);
     }
 
     public int    getIdCliente()  { return idCliente; }

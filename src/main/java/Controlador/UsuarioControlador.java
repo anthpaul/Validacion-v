@@ -9,7 +9,9 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
- * Controlador — Usuarios (solo admin)
+ * 
+ * @author Anthony Delgado
+ * 
  */
 public class UsuarioControlador {
 
@@ -23,13 +25,10 @@ public class UsuarioControlador {
     }
 
     private void iniciarEventos() {
-
         panel.getBtnNuevo().addActionListener(e -> panel.limpiarFormulario());
-
         panel.getBtnGuardar().addActionListener(e -> guardar());
-
+        panel.getBtnActivar().addActionListener(e -> activar());
         panel.getBtnDesactivar().addActionListener(e -> desactivar());
-
         panel.getBtnBuscar().addActionListener(e -> buscar());
 
         panel.getTabla().getSelectionModel().addListSelectionListener(e -> {
@@ -58,22 +57,14 @@ public class UsuarioControlador {
                 return;
             }
 
-            // Nuevo usuario
             String password = u.getPasswordHash();
             if (password.isEmpty()) {
-                panel.mostrarError("La contraseña es obligatoria para usuarios nuevos");
+                panel.mostrarError("La contraseña es obligatoria");
                 return;
             }
 
-            // Hashear contraseña
-            String hash = HashUtil.md5(password);
-
             usuarioService.registrar(
-                u.getNombre(),
-                u.getEmail(),
-                password,
-                u.getRol()
-            );
+                u.getNombre(), u.getEmail(), password, u.getRol());
 
             panel.mostrarExito("Usuario registrado correctamente");
             panel.limpiarFormulario();
@@ -86,10 +77,44 @@ public class UsuarioControlador {
         }
     }
 
+    // ── Activar usuario ──────────────────────────────────────────────────────
+    private void activar() {
+        int id = panel.getIdSeleccionado();
+        if (id == 0) {
+            panel.mostrarError("Seleccione un usuario para activar");
+            return;
+        }
+
+        if (panel.isUsuarioActivoSeleccionado()) {
+            panel.mostrarError("El usuario ya está activo");
+            return;
+        }
+
+        if (!panel.confirmar("¿Está seguro de activar este usuario?")) return;
+
+        try {
+            usuarioService.activar(id);
+            panel.mostrarExito("Usuario activado correctamente");
+            panel.limpiarFormulario();
+            cargarTabla();
+
+        } catch (IllegalArgumentException e) {
+            panel.mostrarError(e.getMessage());
+        } catch (SQLException e) {
+            panel.mostrarError("Error del sistema: " + e.getMessage());
+        }
+    }
+
+    // ── Desactivar usuario ───────────────────────────────────────────────────
     private void desactivar() {
         int id = panel.getIdSeleccionado();
         if (id == 0) {
             panel.mostrarError("Seleccione un usuario para desactivar");
+            return;
+        }
+
+        if (!panel.isUsuarioActivoSeleccionado()) {
+            panel.mostrarError("El usuario ya está inactivo");
             return;
         }
 
@@ -101,6 +126,8 @@ public class UsuarioControlador {
             panel.limpiarFormulario();
             cargarTabla();
 
+        } catch (IllegalArgumentException e) {
+            panel.mostrarError(e.getMessage());
         } catch (SQLException e) {
             panel.mostrarError("Error del sistema: " + e.getMessage());
         }
@@ -116,10 +143,11 @@ public class UsuarioControlador {
                 return;
             }
 
-            // Filtrar por nombre o email
             List<usuario> filtrados = todos.stream()
-                .filter(u -> u.getNombre().toLowerCase().contains(termino.toLowerCase())
-                          || u.getEmail().toLowerCase().contains(termino.toLowerCase()))
+                .filter(u -> u.getNombre().toLowerCase()
+                              .contains(termino.toLowerCase())
+                          || u.getEmail().toLowerCase()
+                              .contains(termino.toLowerCase()))
                 .collect(java.util.stream.Collectors.toList());
 
             panel.cargarTabla(filtrados);

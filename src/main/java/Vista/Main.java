@@ -3,7 +3,9 @@ import Vista.Loginframe;
 import javax.swing.*;
 
 /**
- * Punto de entrada de la aplicación
+ * 
+ * @author Anthony Delgado 
+ * 
  */
 public class Main {
     public static void main(String[] args) {
